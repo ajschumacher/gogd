@@ -1,4 +1,4 @@
-(ns happy-dashboard.core
+(ns gogd.core
   (:use [compojure.core :only (defroutes GET)]
         ring.util.response
         ring.middleware.cors
