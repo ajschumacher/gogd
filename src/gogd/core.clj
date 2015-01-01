@@ -1,35 +1,32 @@
 (ns gogd.core
   (:use [compojure.core :only (defroutes GET defroutes POST)]
-        ring.util.response
         ring.middleware.cors
         org.httpkit.server)
-  (:require [compojure.handler :as handler]
-            [ring.util.response :refer [redirect]]
-            [ring.middleware.reload :as reload]))
+  (:require [compojure.handler :as handler]))
 
-(def clients (atom {}))
+(def clients (atom #{}))
 
 (defn ws [req]
-  (with-channel req con
-    (swap! clients assoc con true)
-    (println con " connected")
-    (on-close con (fn [status]
-                    (swap! clients dissoc con)
-                    (println con " disconnected. status: " status)))))
+  (with-channel req channel
+    (swap! clients conj channel)
+    (println channel " connected!")
+    (on-close channel (fn [status]
+                        (swap! clients disj channel)
+                        (println channel " disconnected. status: " status)))))
 
 (defn transfer-data [req]
-  (doseq [client @clients]
-    (send! (key client) (slurp (:body req))))
+  (let [data (slurp (:body req))]
+    (doseq [client @clients]
+      (send! client data)))
   {:status 200
-   :headers {"Content-Type" "application/json; charset=utf-8"}
+   :headers {"Content-Type" "application/json"}
    :body "{\"success\": true}"})
 
 (defroutes routes
-  (GET "/data" [] ws)
+  (GET  "/data" [] ws)
   (POST "/data" [] transfer-data))
 
 (def application (-> (handler/site routes)
-                     reload/wrap-reload
                      (wrap-cors :access-control-allow-origin #".+")))
 
 (defn -main [& args]
