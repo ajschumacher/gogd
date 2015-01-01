@@ -1,12 +1,11 @@
 (ns gogd.core
-  (:use [compojure.core :only (defroutes GET)]
+  (:use [compojure.core :only (defroutes GET defroutes POST)]
         ring.util.response
         ring.middleware.cors
         org.httpkit.server)
   (:require [compojure.handler :as handler]
             [ring.util.response :refer [redirect]]
-            [ring.middleware.reload :as reload]
-            [cheshire.core :refer :all]))
+            [ring.middleware.reload :as reload]))
 
 (def clients (atom {}))
 
@@ -18,23 +17,20 @@
                     (swap! clients dissoc con)
                     (println con " disconnected. status: " status)))))
 
-(future (loop []
-          (doseq [client @clients]
-            (send! (key client) (generate-string
-                                 {:happiness (rand 10)})
-                   false))
-          (Thread/sleep 5000)
-          (recur)))
+(defn transfer-data [req]
+  (doseq [client @clients]
+    (send! (key client) (slurp (:body req))))
+  {:status 200
+   :headers {"Content-Type" "application/json; charset=utf-8"}
+   :body "{\"success\": true}"})
 
 (defroutes routes
-  (GET "/data" [] ws))
+  (GET "/data" [] ws)
+  (POST "/data" [] transfer-data))
 
 (def application (-> (handler/site routes)
                      reload/wrap-reload
-                     (wrap-cors
-                      :access-control-allow-origin #".+")))
+                     (wrap-cors :access-control-allow-origin #".+")))
 
 (defn -main [& args]
-  (let [port (Integer/parseInt
-               (or (System/getenv "PORT") "4808"))]
-    (run-server application {:port port :join? false})))
+  (run-server application {:port 4808 :join? false}))
