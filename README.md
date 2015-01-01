@@ -3,9 +3,18 @@
 This component fulfills the HTTP "web service" part of a [gog](https://github.com/ajschumacher/gog) visualization system.
 
 
+### Installation
+
+This is Clojure; [install Leiningen](http://leiningen.org/#install). Then clone this repo.
+
+
 ### Usage
 
+From the `gogd` directory:
+
+```bash
 lein run
+```
 
 
 ### License
